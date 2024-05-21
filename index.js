@@ -10,19 +10,18 @@ dotenv.config();
 const instagram = new IgApiClient();
 
 const weekdays = ['월', '화', '수', '목', '금'];
-let file = "./meal.jpg"
 
-async function createImage(lst, date, weekday, n) {
+export async function createImage(lst, date, weekday, n) {
   const W = 1024;
   const H = 1024;
 
   lst = lst.reverse();
 
-  registerFont('./NanumSquareRoundEB.ttf', { family: 'NanumSquareRoundEB' });
+  registerFont('./assets/fonts/NanumSquareRoundEB.ttf', { family: 'NanumSquareRoundEB' });
   const dateFont = '36px "NanumSquareRoundEB"';
   const dateFontColor = 'rgb(196, 196, 196)';
 
-  const image = await loadImage('./food_background.png');
+  const image = await loadImage(`./assets/backgrounds/background${n}.jpg`);
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
   ctx.drawImage(image, 0, 0, W, H);
@@ -48,7 +47,7 @@ async function createImage(lst, date, weekday, n) {
     textL -= 85;
   }
 
-  const out = fs.createWriteStream(`./meal${n}.jpg`);
+  const out = fs.createWriteStream(`./assets/results/meal${n}.jpg`);
   const stream = canvas.createJPEGStream();
   stream.pipe(out);
 
@@ -61,7 +60,7 @@ async function createImage(lst, date, weekday, n) {
   });
 }
 
-function getDate() {
+export function getDate() {
   let date = new Date();
   let year = date.getFullYear();
   let month = ("0" + (date.getMonth() + 1)).slice(-2);
@@ -80,7 +79,7 @@ async function login() {
 
 async function uploadImageToInstagram(n) {
   try {
-    const image = fs.readFileSync(`./meal${n}.jpg`);
+    const image = fs.readFileSync(`./assets/results/meal${n}.jpg`);
   
     await instagram.publish.story({
       file: image,
@@ -93,7 +92,7 @@ async function uploadImageToInstagram(n) {
   }
 }
 
-cron.schedule('5 * * * * *', async () => {
+cron.schedule('57 59 6 * * *', async () => {
   try {
     await login();
 
