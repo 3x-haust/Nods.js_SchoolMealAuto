@@ -92,7 +92,7 @@ async function uploadImageToInstagram(n) {
   }
 }
 
-cron.schedule('57 59 6 * * *', async () => {
+cron.schedule('58 59 6 * * *', async () => {
   try {
     await login();
 

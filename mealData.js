@@ -2,8 +2,8 @@ import axios from 'axios';
 
 export async function getMealData(date1) {
   const date = date1.replace(/-/g, '');
-  const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Key=${process.env.KEY}&&Type=json&ATPT_OFCDC_SC_CODE=B10&SD_SCHUL_CODE=7011569&MLSV_YMD=${date}`;
-
+  const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Key=${process.env.KEY}&Type=json&ATPT_OFCDC_SC_CODE=B10&SD_SCHUL_CODE=7011569&MLSV_YMD=${date}`;
+  console.log(url)
   try {
     const response = await axios.get(url);
     if(response.status != 200)  return ['급식 정보가 없습니다.'];
