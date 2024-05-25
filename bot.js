@@ -85,6 +85,16 @@ client.on(Events.ClientReady, async () => {
         ],
       },
       {
+        name: '학기',
+        description: '시간표 정보를 확인할 학기',
+        required: true,
+        type: pkg.ApplicationCommandOptionType.String,
+        choices: [
+        { name: '1학기', value: '1' },
+        { name: '2학기', value: '2' },
+        ],
+      },
+      {
         name: '일',
         description: '시간표 정보를 확인할 날짜 (DD 형식)',
         required: true,
@@ -122,6 +132,14 @@ client.on(Events.ClientReady, async () => {
   }
 });
 
+function getDayOfWeek(yyyyMMdd){
+  const day = ['일', '월', '화', '수', '목', '금', '토'];
+	
+  const dayOfWeek = new Date(yyyyMMdd).getDay(); 
+
+  return day[dayOfWeek];
+}
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isCommand()) return;
 
@@ -129,26 +147,31 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (commandName === '급식') {
     const year = interaction.options.get('년').value;
-    const month = interaction.options.get('월').value;
-    const day = interaction.options.get('일').value;
+    let month = interaction.options.get('월').value;
+    let day = interaction.options.get('일').value;
+    const meal = ['조식', '중식', '석식'];
+    month = String(month).padStart(2, '0');
+    day = String(day).padStart(2, '0');
     
     const date = year + "-" + month + "-" + day
     try {
       const mealData = await getMealData(date);
-      if (mealData[0] === '급식 정보가 없습니다.') {
-        await interaction.reply("급식 정보가 없습니다.");
+      if (mealData === undefined || mealData[0] === '급식 정보가 없습니다.') {
+        const embed = new EmbedBuilder()
+          .setColor('#0099ff')
+          .setTitle(`${date} ${getDayOfWeek(date)}요일 급식 정보`)
+          .addFields('급식 정보가 없습니다.');
+
+        await interaction.reply({ embeds: [embed] });
         return;
       }
       const embed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle(`${date} 급식 정보`)
-        .addFields(
-          { name: '조식', value: mealData[0].split(' ').join('\n') },
-          { name: '\u200B', value: '\u200B' },
-          { name: '중식', value: mealData[1].split(' ').join('\n') },
-          { name: '\u200B', value: '\u200B' },
-          { name: '석식', value: mealData[2].split(' ').join('\n') }
-        );
+        .setTitle(`${date} ${getDayOfWeek(date)}요일 급식 정보`)
+
+        for(let i = 0; i < mealData.length; i++) {
+          embed.addFields({ name: '\u200B', value: '\u200B' }, { name: meal[i + (3 - mealData.length)], value: mealData[i]?.split(' ').join('\n') || '' });
+        }
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
@@ -159,7 +182,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const dep = interaction.options.get('학과').value;
     const grade = interaction.options.get('학년').value;
     const cls = interaction.options.get('반').value;
-    const date = interaction.options.get('일').value; // 요청 날짜
+    let date = interaction.options.get('일').value;
+    if(date < 10) date = '0' + date;
    
     try {
       const timeTableData = await getTimeTableData(cls, grade, dep, date);

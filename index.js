@@ -9,17 +9,23 @@ dotenv.config();
 
 const instagram = new IgApiClient();
 
-const weekdays = ['월', '화', '수', '목', '금'];
+function getDayOfWeek(yyyyMMdd){
+  const day = ['일', '월', '화', '수', '목', '금', '토'];
+	
+  const dayOfWeek = new Date(yyyyMMdd).getDay(); 
 
-export async function createImage(lst, date, weekday, n) {
+  return day[dayOfWeek];
+}
+
+export async function createImage(lst, date, n) {
   const W = 1024;
   const H = 1024;
 
   lst = lst.reverse();
 
   registerFont('./assets/fonts/NanumSquareRoundEB.ttf', { family: 'NanumSquareRoundEB' });
-  const dateFont = '36px "NanumSquareRoundEB"';
-  const dateFontColor = 'rgb(196, 196, 196)';
+  const dateFont = '40px "NanumSquareRoundEB"';
+  const dateFontColor = 'rgb(0, 0, 0)';
 
   const image = await loadImage(`./assets/backgrounds/background${n}.jpg`);
   const canvas = createCanvas(W, H);
@@ -27,24 +33,24 @@ export async function createImage(lst, date, weekday, n) {
   ctx.drawImage(image, 0, 0, W, H);
 
   const parsedDay = date.split('-');
-  const text = `${parsedDay[0]}년 ${parsedDay[1]}월 ${parsedDay[2]}일 ${weekdays[weekday]}요일`;
+  const text = `${parsedDay[1]}/${parsedDay[2]} (${getDayOfWeek(date)})`;
   ctx.font = dateFont;
   ctx.fillStyle = dateFontColor;
   ctx.textAlign = 'right';
-  ctx.fillText(text, W - 80 , 75);
+  ctx.fillText(text, W - 450 , 200);
 
-  const mealFont = '70px "NanumSquareRoundEB"';
-  const mealFontColor = 'rgb(71, 122, 255)';
+  const mealFont = '57px "NanumSquareRoundEB"';
+  const mealFontColor = 'rgb(0, 0, 0)';
 
-  let textL = 590;
+  let textL = 630;
 
   for (let l of lst) {
     ctx.fillStyle = mealFontColor;
     ctx.font = mealFont;
     ctx.textAlign = 'left';
-    ctx.fillText(l, H - 935, textL + 450, W - 100);
+    ctx.fillText(l, H - 860, textL + 150, W - 100);
 
-    textL -= 85;
+    textL -= 75;
   }
 
   const out = fs.createWriteStream(`./assets/results/meal${n}.jpg`);
@@ -70,6 +76,9 @@ export function getDate() {
   return formattedDate;
 }
 
+// const mealData = await getMealData("2024-05-23");
+// createImage(mealData[1].split(' '), "2024-05-23", 1);
+
 instagram.state.generateDevice(process.env.IG_USERNAME);
 
 async function login() {
@@ -77,42 +86,49 @@ async function login() {
   console.log('✅ 인스타그램 로그인 성공');
 }
 
-async function uploadImageToInstagram(n) {
+async function uploadImagesToInstagram() {
+  const parsedDay = getDate().split('-');
+  const todayDate = `${parsedDay[0]}년 ${parsedDay[1]}월 ${parsedDay[2]}일 ${getDayOfWeek(getDate())}요일`;
+
   try {
-    const image = fs.readFileSync(`./assets/results/meal${n}.jpg`);
-  
-    await instagram.publish.story({
-      file: image,
+    const images = [0, 1, 2].map(n => ({
+      file: fs.readFileSync(`./assets/results/meal${n}.jpg`),
+    }));
+
+    await instagram.publish.album({
+      items: images,
+      caption: `미림마이스터고 급식\n\n${todayDate}\n\n#급식 #미림마이스터고`
     });
 
-    console.log(`✅ 인스타그램 스토리 업로드 성공: meal${n}.jpg`);
+    console.log(`✅ 인스타그램 게시물 업로드 성공: meal0.jpg, meal1.jpg, meal2.jpg`);
   } catch (error) {
-    // console.error(error);
-    console.error(`🛑 meal${n}.jpg 스토리 업로드 오류가 났습니다`);
+    console.error(`🛑 게시물 업로드 오류가 났습니다`);
   }
 }
 
-cron.schedule('58 59 6 * * *', async () => {
+//cron.schedule('33 * * * * *', async () => {
+cron.schedule('0 0 7 * * 1-5', async () => {
   try {
     await login();
 
     const mealData = await getMealData(getDate());
-    if(mealData[0] === '급식 정보가 없습니다.') {
+    //const mealData = await getMealData("2024-05-23");
+    if(mealData == undefined || mealData[0] === '급식 정보가 없습니다.') {
       console.log('🛑 급식 정보가 없습니다.');
       return;
     };
     
     const createImagePromises = [];
     for (let i = 0; i < 3; i++) {
-      createImagePromises.push(createImage(mealData[i].split(' '), getDate(), new Date().getDay() - 1, i));
+      if(mealData[i] !== undefined)
+        createImagePromises.push(createImage(mealData[i].split(' '), getDate(), i));
+        //createImagePromises.push(createImage(mealData[i].split(' '), "2024-05-23", i));
     }
     await Promise.all(createImagePromises);
 
-    for (let i = 0; i < 3; i++) {
-      await uploadImageToInstagram(i);
-    }
+    await uploadImagesToInstagram();
   } catch (error) {
-    //console.error(error);
+    console.error(error);
     console.error('🛑 오류가 났습니다');
   }
 });
